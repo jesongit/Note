@@ -309,7 +309,7 @@ printf("%zd\n", sizeof(int));   // 4
 // 对于一个值 sizeof 1.0，括号是可选的，建议加上括号
 
 // 使用 const 定义一个常量
-const int a = 5;  // 定义后 a 无法被再次赋值
+const int a = 5;  // 初始化或第一次复制后，无法再次被赋值
 
 // limits.h 中定义了所有整数的最大最小值（会根据系统变化）
 // float.h 中定义了浮点数的有效位数
@@ -328,9 +328,17 @@ C 语言中没有专门处理字符串的数据类型，使用字符数组来处
 | 函数 | 作用 |
 | --- | --- |
 | strlen(char *) | 计算字符串长度 |
-
-
-
+| strcat(char *, char *) | 连接字符串 |
+| strncat(char *, char *, int len) | 仅连接指定长度 |
+| strcmp(char *, char *) | 比较字符串 |
+| strncmp(char * char *) | 比较指定长度字符串，即开头 |
+| strcpy(char *, char *) | 拷贝字符串，返回第一个参数地址 |
+| strncpy(char *, char *) | 拷贝指定长度 |
+| strchr(char *, char c) | 查找首次出现的位置 |
+| strrchar(char *, char c) | 查找最后出的位置 |
+| strpbrk(char *, char *) | 查找 s1 中首次出现 s2 中任意字符的位置 |
+| strstr(char *, char *) | 查找指定字符串 |
+| fprintf(char *, args) | 将输出存储到指定字符串 |
 
 
 

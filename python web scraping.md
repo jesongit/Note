@@ -175,6 +175,143 @@ def test_2():
 > 使用 `multiprocessing.Semaphore` 来实现
 
 ```python
-from multiprocessing import Process
+# 个人尝试不知道为啥，full.acquire() 这里一直请求不到
+from logging import PercentStyle
+from multiprocessing import Process, Semaphore, Lock, Queue, current_process
+import time
+import sys
+
+buffer = Queue(10)
+empty = Semaphore(2)
+full = Semaphore(0)
+lock = Lock()
+
+class Consumer(Process):
+    def run(self):
+        global buffer, empty, full, lock
+        while True:
+            print(f'{self.name} full acquire')
+            full.acquire()
+            print(f'{self.name} lock acquire')
+            lock.acquire()
+            print(f'Consumer get {buffer.get()}')
+            time.sleep(1)
+            print(f'{self.name} lock release')
+            lock.release()
+            print(f'{self.name} empty release')
+            empty.release()
+
+class Producer(Process):
+    def run(self):
+        global buffer, empty, full, lock
+        while True:
+            print(f'{self.name} empty acquire')
+            empty.acquire()
+            print(f'{self.name} lock acquire')
+            lock.acquire()
+            print('Producer put 1')
+            buffer.put(1)
+            time.sleep(1)
+            print(f'{self.name} lock release')
+            lock.release()
+            print(f'{self.name} full release')
+            full.release()
+
+if __name__ == '__main__':
+    p = Producer()
+    c = Consumer()
+    p.daemon = c.daemon = True
+    p.start()
+    c.start()
+    p.join()
+    c.join()
+    print('Main Process Ended')
+```
+
+### 进程资源共享
+上述示例中, 不能用queue.Queue, 一定要用 multiprocessing.Queue, 因为进程之间的资源不共享
+ - multiprocessing.Queue: 队列, 进程资源共享
+ - multiprocessing.Pipe:  管道, 进行手法消息(deplex = False 为单向管道)
+ ```python
+from multiprocessing import Process, Pipe
+
+class Consumer(Process):
+    def __init__(self, pipe):
+        Process.__init__(self)
+        self.pipe = pipe
+    
+    def run(self):
+        self.pipe.send('Consumer Words')
+        print(f'Consumer Received: {self.pipe.recv()}')
+
+class Producer(Process):
+    def __init__(self, pipe):
+        Process.__init__(self)
+        self.pipe = pipe
+    
+    def run(self):
+        print(f'Consumer Received: {self.pipe.recv()}')
+        self.pipe.send('Prodecer Words')
+
+if __name__ == '__main__':
+    pipe = Pipe()
+    p = Producer(pipe[0])
+    c = Consumer(pipe[1])
+    p.daemon = c.daemon = True
+    p.start()
+    c.start()
+    p.join()
+    c.join()
+    print('Main Ended')
+ ```
+
+### 进程池
+```python
+from multiprocessing import Pool
+import time
+
+def function(index):
+    print(f'Start process: {index}')
+    time.sleep(3)
+    print(f'End process {index}')
+
+if __name__ == '__main__':
+    # 不指定参数时会按照CPU核心来决定数量
+    pool = Pool(processes=3)
+    for i in range(20):
+        pool.apply_async(func=function, args=[i])
+
+    print('Main Process Started')
+    pool.close()
+    pool.join()
+    print('Main Process Ended')
+```
+
+#### `Map` 方法
+
+`Map` 方法会将一个可迭代对象依次传入指定方法执行
+
+```python
+from multiprocessing import Pool
+import urllib.request
+import urllib.error
+
+def scrape(url):
+    try:
+        urllib.request.urlopen(url)
+        print(f'URL {url} Scraped')
+    except (urllib.error.HTTPError, urllib.error.URLError):
+        print(f'URL {url} not Scraped')
+
+if __name__ == '__main__':
+    pool = Pool(processes=2)
+    urls = [
+        'https://www.baidu.com',
+        'https://wallhaven.cc',
+        'http://www.posase.im',
+        'https://github.com'
+    ]
+    pool.map(scrape, urls)
+    pool.close()
 
 ```

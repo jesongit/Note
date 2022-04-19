@@ -315,3 +315,189 @@ if __name__ == '__main__':
     pool.close()
 
 ```
+
+
+## 爬虫入门
+
+### `Requests` 库的使用
+
+**安装**: `pip install requests`
+
+#### 发起请求
+
+```python
+import requests
+
+# Get 请求
+r = requests.get('http://httpbin.org/get')
+print(r.text)
+
+# 带参数的 Get
+r = requests.get('http://httpbin.org/get?name=posase&sex=male')
+
+# 使用 params 参数
+data = {'name': 'posase', 'sex' : 'male'}
+r = requests.get('http://httpbin.org/get', params=data)
+
+# Post 请求
+# 注意 Post 的参数使用 data 字段传递
+data = {'name': 'posase', 'sex' : 'male'}
+r = requests.post('http://httpbin.org/post', data=data)
+print(r.text)
+```
+
+#### `Response` 响应数据
+
+**常见字段**
+| 字段名 | 说明 |
+| --- | --- |
+| `status_code` | 状态码 |
+| `headers` | 响应头 |
+| `cookies` | Cookies |
+| `url` | 请求的 Url |
+| `history` | 请求历史 |
+| `encoding`| 编码格式 |
+
+```python
+# 内置状态码 其实就是 200
+if r.status_code == requests.codes.ok
+    print('Request Successfully')
+```
+
+#### 解析数据
+
+```python
+# 该网站返回的都是 json 格式的数据
+# 直接调用 json 方法可以进行解析数据
+print(type(r.text))     # <class 'str'>
+print(r.json())         # json to dict {'x' : 'y'}
+print(type(r.json()))   # <class 'dict'>
+
+# 使用正则表达式获取我们想要的内容
+import re
+import requests as req
+url = 'https://www.xbiquge.la'
+r = req.get(url)
+pa = re.compile(r'<dt><span>(.*)</span>.*>(.*)</a>')
+res = re.findall(pa, r.text)
+print(res)
+
+# 二进制数据 图片，视频，音乐等
+r = requests.get('https://github.com/favicon.ico')
+print(r.content) # b'\x00\x00....'
+with open('favicon.ico', 'wb') as f:
+    f.write(r.content) # 保存为一个文件
+```
+
+> `Python re` 模块[官方文档](https://docs.python.org/zh-cn/3/library/re.html)
+
+#### 设置 `Headers`
+
+> 某些网站会过滤 `Headers` 不符合要求的请求
+
+```python
+# 比如设置 User-Agent
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36'
+}
+r = requests.get('https://www.baidu.com', headers=headers)
+print(r.text)
+```
+
+#### 文件上传
+
+```python
+import requests
+files = {'file': open('favicon.ico', 'rb')}
+r = requests.post('http://httpbin.org/post', files=files)
+print(r.text)
+```
+
+#### 设置 `Cookies`
+```python
+# 打印 Cookies
+import requests
+r = requests.get('http://www.baidu.com')
+print(r.cookies)
+for key, val in r.cookies.items():
+    print(f'{key} = {val}')
+
+# 设置 Cookies 模拟登录
+headers = {
+    'Cookie': 'xxxx'
+}
+r = requests.get('xxx', headers=headers)
+
+# 构造 Cookies 对象
+cookies = 'xxxx'
+jar = requests.cookies.RequestsCookieJar()
+for cookie in cookies.split(';'):
+    key, val = cookie.split('=', 1)
+    jar.set(key, val)
+r = requests.get('xxx', cookies=jar)
+```
+
+#### `Session` 维持
+
+```python
+import requests
+s = requests.Session()
+s.get('xxx')
+r = s.get('xxx')
+```
+
+#### `SSL` 验证
+
+```python
+# 不验证 SSl 证书，防止不受信任的证书无法访问
+import logging
+import requests
+from requests.packages import urllib3
+res = requests.get('xxx', verify=False)
+
+# 但是还是会有提示警告 要在请求前使用
+urllib3.disable_warnings() # 设置忽略警告(可选)
+# 或者日志记录警告
+logging.captureWarnings(True)
+# 也可以指定本地证书 可以是单个文件，或者两个文件路径的元组
+res = requests.get('xx', cert=('x.crt', 'y.key'))
+
+```
+
+#### 超时检测
+```python
+# 默认永久等待(None)
+# 连接+读取 1 秒内没响应则异常
+requests.get('xx', timeout=1)
+# 连接超时时间 1s，读取超时时间 2s
+requests.get('xx', timeout=(1, 2))
+```
+
+#### 身份认证
+```python
+# 密码错误 返回 401
+from requests.auth import HTTPBasicAuth
+r = requests.get('xx', auth=HTTPBasicAuth('user', 'password'))
+# 可以直接简写
+r = requests.get('xx', auth=('user', 'password'))
+
+# 其他身份认证 OAuth 认证
+# 需要安装  pip install requests_oauthlib
+from requests_oauthlib import OAuth1
+auth = OAuth1('key', 'key_secret','token', 'toke_secret')
+requests.get('xx', auth=auth)
+```
+> 更多参考[官方文档](https://requests-oauthlib.readthedocs.org/)
+
+#### 代理设置
+```python
+proxies = {
+    'http': 'http://xxxxx',
+    'https': 'http://xxx'
+    # 需要账号密码 user:pd@host
+    'http': 'http://user:password@0.0.0.0:88',
+    # 还支持 Socks 代理，需要安装 pip install "requests[socks]"
+    'http': 'socks5://xxxx'
+}
+req.get('xx', proxies=proxies)
+```
